@@ -1,7 +1,7 @@
 # Michigan Community College Course Scapers
 ## Fully created and developed by Sabit Islam.
 
-These are python scripts that scrape the Course Guides of every Community College in the state of Michigan.
+These are python scripts that scrape the course guides of every Community College in the state of Michigan.
 
 Dependencies:
 - requests
@@ -11,4 +11,4 @@ Dependencies:
 - regex
 - pandas
 
-Date: June 2025
+Date: June 2025 (Still Contributing)
