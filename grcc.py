@@ -1,5 +1,5 @@
 """
-GRCC Course Scraper
+Grand Rapids CC Course Scraper
 
 Developed by: Sabit Islam 
 Date: 06-09-2025
@@ -91,5 +91,5 @@ for page in range(1,11):
 driver.quit()
 
 df = pd.DataFrame(all_courses)
-df.to_csv("grcc_courses.csv", index=False)
+df.to_csv("data/grcc_courses.csv", index=False)
 "Saved to grcc_courses.csv."

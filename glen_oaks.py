@@ -83,5 +83,5 @@ for dept_path in department_paths:
         })
 
 df = pd.DataFrame(all_courses)
-df.to_csv("glen_oaks_courses.csv", index=False)
+df.to_csv("data/glen_oaks_courses.csv", index=False)
 print("It worked!")

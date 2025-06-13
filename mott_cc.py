@@ -14,7 +14,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import regex as re
 import pandas as pd
-import time
 
 options = Options()
 options.add_argument("--headless")
@@ -106,5 +105,5 @@ for page in range(1, 11):
 driver.quit()
 
 df = pd.DataFrame(all_courses)
-df.to_csv("mott_courses.csv", index=False)
+df.to_csv("data/mott_courses.csv", index=False)
 print("It worked and you are not a total loser!")

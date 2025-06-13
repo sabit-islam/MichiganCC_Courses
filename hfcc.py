@@ -67,5 +67,5 @@ for page in range(0,21):
             time.sleep(0.5)  
 
 df = pd.DataFrame(all_courses)
-df.to_csv("hfcc_courses.csv", index=False)
+df.to_csv("data/hfcc_courses.csv", index=False)
 print("Courses saved into hfcc_courses.csv")
