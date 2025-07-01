@@ -1,11 +1,12 @@
 """
-Kellogg College Course Scraper
+Kirtland Community College Course Scraper
 
 Developed by: Sabit Islam 
-Date: 06-13-2025
+Date: 07-01-2025
 
 Developed for LSA Transfer Student Center and to be used for educational purposes only.
 """
+
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -30,48 +31,38 @@ def clean_description(raw_html: str) -> str:
 
 def parse_course_components(clean_text: str):
     clean_text = clean_text.strip()
-
-    header_match = re.match(
-    r'^([A-Z]{2,5}\s*\d{2,6}[A-Z0-9]*)\s*[-–]\s*(.*?)\s+(\d+(?:\.\d+)?)\s*CR\b',
-    clean_text
+    match = re.search(
+        r'^([A-Z]{2,5}\s*\d{3,5})\s*-\s*(.*?)\s+(\d+(?:\.\d+)?)\s+Credit Hours',
+        clean_text
     )
-    if header_match:
-        course_code = header_match.group(1).strip()
-        course_name = header_match.group(2).strip()
-        credits = header_match.group(3).strip()
+
+    if match:
+        course_code = match.group(1).strip()
+        course_name = match.group(2).strip()
+        credits = match.group(3).strip()
     else:
         course_code = course_name = credits = ""
-
-    description_start = re.search(r'\d+\s*CR\b', clean_text)
-    if description_start:
-        desc_text = clean_text[description_start.end():].strip()
+    desc_match = re.search(r'(Prerequisites:.*?)Click here for class offerings', clean_text, re.DOTALL)
+    if desc_match:
+        description = desc_match.group(1).strip()
     else:
-        desc_text = clean_text
-
-    cutoff = re.search(r'\b(Requisites|Course Learning Outcomes):', desc_text, re.IGNORECASE)
-    if cutoff:
-        description = desc_text[:cutoff.start()].strip()
-    else:
-        description = desc_text
+        description = re.split(r'Credit Hours', clean_text, maxsplit=1)[-1].strip()
 
     return course_code, course_name, credits, description
-
 all_courses = []
-total_skipped = 0
-courses_skipped = []
 
-for page in range(1,12):  
-    url = f"http://catalog.kellogg.edu/content.php?catoid=27&catoid=27&navoid=2181&filter[item_type]=3&filter[only_active]=1&filter[3]=1&filter[cpage]={page}"
-    print(f"Page {page} at {url}")
+for page in range(1, 11):
+    url = f"https://ecatalog.macomb.edu/content.php?catoid=9&navoid=327&filter[item_type]=3&filter[only_active]=1&filter[3]=1&filter[cpage]={page}"
+    print(f"Scraping page {page}")
     driver.get(url)
+    time.sleep(1)
     soup = BeautifulSoup(driver.page_source, "html.parser")
 
     course_links = soup.find_all("a", href=True, onclick=lambda x: x and "showCourse" in x)
 
-    print(f"Found {len(course_links)} courses on this page.")
-
     for link in course_links:
         full_course_text = link.get_text(strip=True)
+        print(f"Fetching course: {full_course_text}")
 
         onclick = link.get("onclick", "")
         match = re.search(r"showCourse\('(\d+)',\s*'(\d+)'", onclick)
@@ -80,8 +71,8 @@ for page in range(1,12):
         catoid, coid = match.groups()
 
         ajax_url = (
-            f"http://catalog.kellogg.edu/ajax/preview_course.php"
-            f"?catoid={catoid}&coid={coid}&show"
+            f"https://ecatalog.macomb.edu/ajax/preview_course.php"
+            f"?catoid={catoid}&coid={coid}"
             f"&display_options=a%3A2%3A%7Bs%3A8%3A~location~%3Bs%3A8%3A~template~%3Bs%3A28%3A~course_program_display_field~%3Bs%3A0%3A~~%3B%7D&show"
         )
 
@@ -93,33 +84,14 @@ for page in range(1,12):
             target_div = None
             for div in divs:
                 h3 = div.find("h3")
-                if h3 and h3.text and full_course_text.split()[0] in h3.text:
+                if h3 and full_course_text.split()[0] in h3.text:
                     target_div = div
                     break
 
             if target_div:
                 raw_text = target_div.get_text(separator=' ')
                 clean_text = clean_description(raw_text)
-
                 course_code, course_name, credit_contact, description = parse_course_components(clean_text)
-
-                if re.search(r'\d{3}-\d{3}', course_code):
-                    print(f"Skipping special topics course: {course_code}")
-                    courses_skipped.append({
-                        "course": full_course_text,
-                        "link": ajax_url}
-                        )
-                    total_skipped += 1
-                    continue
-
-                if not course_code or not course_name:
-                    print(f"Invalid course format, skipped: {full_course_text}")
-                    total_skipped += 1
-                    courses_skipped.append({
-                        "course": full_course_text,
-                        "link": ajax_url}
-                        )
-                    continue
             else:
                 course_code = course_name = credit_contact = ""
                 description = "No description found"
@@ -127,7 +99,6 @@ for page in range(1,12):
         except Exception as e:
             course_code = course_name = credit_contact = ""
             description = f"Error: {e}"
-        
 
         all_courses.append({
             "course_code": course_code,
@@ -135,13 +106,10 @@ for page in range(1,12):
             "credit_hours": credit_contact,
             "description": description
         })
-        print(f"Processed course: {course_code} - {course_name}")
-        
+
+        print(f"{course_code} | {course_name} | {credit_contact}cr | {description[:50]}...")
 
 driver.quit()
 df = pd.DataFrame(all_courses)
-df1 = pd.DataFrame(courses_skipped, columns=["skipped_courses"])
-df1.to_csv("data/debug/kellogg_debug.csv", index=False)
-df.to_csv("data/kellogg_courses.csv", index=False)
-print("It worked!")
-print(f"Total courses skipped: {total_skipped}")
+df.to_csv("data/macomb_courses.csv", index=False)
+print("✅ Done!")
