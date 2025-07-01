@@ -18,5 +18,11 @@ Colleges Completed:
 - Grand Rapids CC
 - Mott CC
 - Glen Oaks CC 
+- Kellogg CC
+- Macomb CC
+- Monroe CC
+- Montcalm 
+- North Central 
+- Schoolcraft
 
 Date: June 2025 (Still Contributing)
