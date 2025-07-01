@@ -1,5 +1,5 @@
 """
-Macomb Community College Course Scraper
+Monroe Community College Course Scraper
 
 Developed by: Sabit Islam 
 Date: 07-01-2025
@@ -31,28 +31,32 @@ def clean_description(raw_html: str) -> str:
 
 def parse_course_components(clean_text: str):
     clean_text = clean_text.strip()
+
     match = re.search(
-        r'^([A-Z]{2,5}\s*\d{3,5})\s*-\s*(.*?)\s+(\d+(?:\.\d+)?)\s+Credit Hours',
+        r'^([A-Z]{2,6}\s*\w{3,5})\s*-\s*(.*?)\s+Credit Hours:\s*(\d+(?:\.\d+)?)',
         clean_text
     )
 
     if match:
         course_code = match.group(1).strip()
         course_name = match.group(2).strip()
-        credits = match.group(3).strip()
+        credit_hours = match.group(3).strip()
     else:
-        course_code = course_name = credits = ""
-    desc_match = re.search(r'(Prerequisites:.*?)Click here for class offerings', clean_text, re.DOTALL)
-    if desc_match:
-        description = desc_match.group(1).strip()
-    else:
-        description = re.split(r'Credit Hours', clean_text, maxsplit=1)[-1].strip()
+        course_code = course_name = credit_hours = ""
+    clean_text = re.sub(r'Billable Contact Hours:.*?(?=Session Cycle:|Prerequisites:|$)', '', clean_text)
 
-    return course_code, course_name, credits, description
+    desc_start = re.search(r'(Prerequisites:|Session Cycle:)', clean_text)
+    if desc_start:
+        description = clean_text[desc_start.start():].strip()
+    else:
+        description = re.split(r'Credit Hours:\s*\d+(?:\.\d+)?', clean_text, maxsplit=1)[-1].strip()
+
+    return course_code, course_name, credit_hours, description
+
 all_courses = []
 
-for page in range(1, 11):
-    url = f"https://ecatalog.macomb.edu/content.php?catoid=9&navoid=327&filter[item_type]=3&filter[only_active]=1&filter[3]=1&filter[cpage]={page}"
+for page in range(1, 6):
+    url = f"https://catalog.monroeccc.edu/content.php?catoid=1&navoid=56&filter[item_type]=3&filter[only_active]=1&filter[3]=1&filter[cpage]={page}"
     print(f"Scraping page {page}")
     driver.get(url)
     time.sleep(1)
@@ -71,7 +75,7 @@ for page in range(1, 11):
         catoid, coid = match.groups()
 
         ajax_url = (
-            f"https://ecatalog.macomb.edu/ajax/preview_course.php"
+            f"https://catalog.monroeccc.edu/ajax/preview_course.php"
             f"?catoid={catoid}&coid={coid}"
             f"&display_options=a%3A2%3A%7Bs%3A8%3A~location~%3Bs%3A8%3A~template~%3Bs%3A28%3A~course_program_display_field~%3Bs%3A0%3A~~%3B%7D&show"
         )
@@ -91,6 +95,7 @@ for page in range(1, 11):
             if target_div:
                 raw_text = target_div.get_text(separator=' ')
                 clean_text = clean_description(raw_text)
+                print(clean_text)
                 course_code, course_name, credit_contact, description = parse_course_components(clean_text)
             else:
                 course_code = course_name = credit_contact = ""
@@ -107,9 +112,9 @@ for page in range(1, 11):
             "description": description
         })
 
-        print(f"{course_code} | {course_name} | {credit_contact} | {description[:50]}")
+        print(f"{course_code} | {course_name} | {credit_contact}cr | {description[:50]}...")
 
 driver.quit()
 df = pd.DataFrame(all_courses)
-df.to_csv("data/macomb_courses.csv", index=False)
-print("Done!")
+df.to_csv("data/monroe_courses.csv", index=False)
+print("✅ Done! Saved to data/kirtland_courses.csv")
