@@ -28,41 +28,41 @@ def clean_description(raw_html: str) -> str:
     text = re.sub(r'(Facebook|Tweet|Add to Portfolio|Print Course)[^)]*\)', '', text)
     return text
 
-def parse_course_components(clean_text: str):
-    clean_text = clean_text.strip()
+
+def parse_course_components(text: str):
+    text = text.strip()
 
     # Match course code and name
-    header_match = re.match(
-        r'^([A-Z]{2,5}\s*\d{3}(?:[A-Z]{1,2}?|-?\d{3})?)\s*-\s*(.*?)\s+Credits?:',
-        clean_text
-    )
+    # Pattern: 2–6 uppercase letters, optional space, 2–4 digits + optional letter
+    match = re.match(r'^([A-Z]{2,6}\s*\d{2,4}[A-Z]?)\s*[-–]\s*(.+)', text)
+    if not match:
+        return "", "", "", text
 
-    if header_match:
-        course_code = header_match.group(1).strip()
-        course_name = header_match.group(2).strip()
-    else:
-        course_code = ""
-        course_name = ""
+    course_code = match.group(1).strip()
+    
+    # Split remaining string (course name + description + credits)
+    rest = match.group(2).strip()
 
-    # Extract credit hours
-    credit_match = re.search(r'Credits?:\s*(\d+(?:\.\d+)?)', clean_text)
-    credits = credit_match.group(1).strip() if credit_match else ""
+    # Match credit hours near end (captures 3, 3.0, .75, etc.)
+    credit_match = re.search(r'(\d+(?:\.\d+)?|\.\d+)\s*credits?', rest, re.IGNORECASE)
+    credit_hours = credit_match.group(1) if credit_match else ""
 
-    # Start description after "Instructional Contact Hours"
-    desc_start_match = re.search(r'Instructional Contact Hours?:\s*\d+(?:\.\d+)?', clean_text)
-    if desc_start_match:
-        description = clean_text[desc_start_match.end():].strip()
-    elif credit_match:
-        description = clean_text[credit_match.end():].strip()
-    else:
-        description = clean_text
+    # Assume course name ends before description starts (first sentence word boundary)
+    # We'll take first 2–6 capitalized words as a naive course name
+    name_parts = rest.split()
+    name_tokens = []
+    for token in name_parts:
+        if token[0].isupper() and not re.match(r'\d', token):
+            name_tokens.append(token)
+        else:
+            break
+    course_name = " ".join(name_tokens)
 
-    # Truncate before "Prerequisite(s):" if found
-    prereq_match = re.search(r'\bPrerequisite\(s\):', description, re.IGNORECASE)
-    if prereq_match:
-        description = description[:prereq_match.start()].strip()
+    # Description is the rest of the string after course name
+    desc_start = rest.find(course_name) + len(course_name)
+    description = rest[desc_start:].strip()
 
-    return course_code, course_name, credits, description
+    return course_code, course_name, credit_hours, description
 
 
 
